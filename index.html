@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070b18">
+  <meta name="description" content="GridRecall: a 10-stage spatial memory challenge. Memorize what is in each numbered box, then find it again.">
+  <title>GridRecall: Spatial Memory Challenge</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23070b18'/%3E%3Crect x='4' y='4' width='7' height='7' rx='1.5' fill='%2322d3ee'/%3E%3Crect x='13' y='4' width='7' height='7' rx='1.5' fill='%2324345f'/%3E%3Crect x='4' y='13' width='7' height='7' rx='1.5' fill='%2324345f'/%3E%3Crect x='13' y='13' width='7' height='7' rx='1.5' fill='%23ff4fa3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ MENU ============ -->
+  <section id="screen-menu" class="screen active" aria-label="Main menu">
+    <div class="menu">
+      <button class="icon-btn js-mute menu-mute" type="button" aria-label="Mute sound"></button>
+
+      <div class="logo">
+        <div class="logo-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div>
+          <h1>Grid<span>Recall</span></h1>
+          <p class="tagline">Spatial Memory Challenge</p>
+        </div>
+      </div>
+
+      <div class="records">
+        <div class="record">
+          <span class="record-label">High Score</span>
+          <span class="record-value" id="menu-high">0</span>
+        </div>
+        <div class="record">
+          <span class="record-label">Highest Level Reached</span>
+          <span class="record-value" id="menu-level">&ndash;</span>
+        </div>
+      </div>
+
+      <div class="mode">
+        <div class="mode-head">
+          <h2>Challenge Mode</h2>
+          <p>All 10 tests in one run, then the bonus round. Your score counts toward the high score.</p>
+        </div>
+        <button id="btn-challenge" class="btn btn-primary" type="button">
+          <span data-ui-icon="play"></span>Start Challenge
+        </button>
+      </div>
+
+      <div class="mode">
+        <div class="mode-head">
+          <h2>Practice Mode</h2>
+          <p>Pick any test and play it on its own. Practice scores are not saved.</p>
+        </div>
+        <div id="practice-levels" class="practice-levels" role="group" aria-label="Choose a test to practice"></div>
+      </div>
+
+      <ol class="howto">
+        <li><b>Memorize</b> which object sits in which numbered box.</li>
+        <li><b>Recall</b> when the boxes close: tap the box (or two boxes) holding the object you are asked for.</li>
+        <li><b>Bonus</b> after Test 10: spot the one object that never appeared.</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ GAME ============ -->
+  <section id="screen-game" class="screen" aria-label="Game">
+    <header class="hud">
+      <div class="hud-brand"><b>Grid<span>Recall</span></b><em id="hud-mode">Challenge</em></div>
+
+      <div class="hud-stats">
+        <div class="stat">
+          <span class="stat-label">Test</span>
+          <span class="stat-value"><span id="hud-level">1</span><small id="hud-level-of">/10</small></span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Difficulty</span>
+          <span class="stat-value"><span id="hud-tier" class="tier tier-easy">Easy</span></span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Score</span>
+          <span class="stat-value" id="hud-score">0</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label" id="hud-streak-label">Streak 0</span>
+          <span class="stat-value" id="hud-mult">&times;1</span>
+        </div>
+      </div>
+
+      <div class="hud-actions">
+        <button class="icon-btn js-mute" type="button" aria-label="Mute sound"></button>
+        <button class="icon-btn" id="btn-quit" type="button" aria-label="Quit to menu"><span data-ui-icon="quit"></span><span class="quit-text">Quit?</span></button>
+      </div>
+
+      <div class="timer">
+        <div class="timebar" id="timebar" role="progressbar" aria-label="Time remaining" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+          <div class="timebar-fill" id="timebar-fill"></div>
+        </div>
+        <span class="time-label" id="hud-time">&ndash;</span>
+      </div>
+    </header>
+
+    <div class="prompt" aria-live="polite">
+      <p class="prompt-main" id="prompt-main"></p>
+      <p class="prompt-sub" id="prompt-sub"></p>
+    </div>
+
+    <main class="board" id="board">
+      <div class="grid locked" id="grid"></div>
+      <div class="briefing" id="briefing" hidden>
+        <p class="briefing-kicker" id="briefing-kicker">Get ready</p>
+        <p class="briefing-title" id="briefing-title">Test 1</p>
+        <span class="tier tier-easy" id="briefing-tier">Easy</span>
+        <p class="briefing-detail" id="briefing-detail"></p>
+      </div>
+    </main>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <section id="screen-results" class="screen" aria-label="Results">
+    <div class="results">
+      <p class="results-kicker" id="results-kicker">Challenge complete</p>
+      <h2 class="results-title" id="results-title">Sharp Mind</h2>
+      <p class="results-score"><span id="results-score">0</span><small>points</small></p>
+      <p class="results-new" id="results-new" hidden>New high score</p>
+      <dl class="results-stats" id="results-stats"></dl>
+      <div class="results-actions">
+        <button id="btn-again" class="btn btn-primary" type="button"><span data-ui-icon="retry"></span><span id="btn-again-text">Play Again</span></button>
+        <button id="btn-next" class="btn" type="button"><span id="btn-next-text">Next Test</span><span data-ui-icon="next"></span></button>
+        <button id="btn-menu" class="btn" type="button"><span data-ui-icon="home"></span>Menu</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+<noscript><p style="padding:2rem;color:#fff;font-family:sans-serif">GridRecall needs JavaScript to run.</p></noscript>
+<script src="./script.js"></script>
+</body>
+</html>
