@@ -110,16 +110,11 @@
 
   // Level progression table. `questions` lists the sub-questions in order.
   const LEVELS = [
-    { test: 1,  tier: 'easy',      boxes: 6,  memorize: 12, questions: ['single', 'single'] },
-    { test: 2,  tier: 'easy',      boxes: 6,  memorize: 12, questions: ['single', 'dual'] },
-    { test: 3,  tier: 'medium',    boxes: 8,  memorize: 14, questions: ['single', 'dual'] },
-    { test: 4,  tier: 'medium',    boxes: 8,  memorize: 14, questions: ['dual', 'single'] },
-    { test: 5,  tier: 'difficult', boxes: 8,  memorize: 10, questions: ['dual', 'single', 'single'] },
-    { test: 6,  tier: 'difficult', boxes: 8,  memorize: 9,  questions: ['dual', 'dual', 'single'] },
-    { test: 7,  tier: 'very',      boxes: 10, memorize: 12, questions: ['single', 'single', 'single'] },
-    { test: 8,  tier: 'very',      boxes: 10, memorize: 11, questions: ['single', 'dual', 'single'] },
-    { test: 9,  tier: 'very',      boxes: 10, memorize: 10, questions: ['dual', 'single', 'dual'] },
-    { test: 10, tier: 'extreme',   boxes: 10, memorize: 10, questions: ['dual', 'single', 'dual', 'single'] },
+    { test: 1, tier: 'easy',      boxes: 6,  memorize: 12, questions: ['single', 'single'] },
+    { test: 2, tier: 'medium',    boxes: 8,  memorize: 14, questions: ['single', 'dual'] },
+    { test: 3, tier: 'difficult', boxes: 8,  memorize: 10, questions: ['dual', 'single', 'single'] },
+    { test: 4, tier: 'very',      boxes: 10, memorize: 11, questions: ['single', 'dual', 'single'] },
+    { test: 5, tier: 'extreme',   boxes: 10, memorize: 10, questions: ['dual', 'single', 'dual', 'single'] },
   ];
 
   const SETTINGS = {
@@ -135,8 +130,9 @@
   };
 
   const STORAGE = {
-    highScore: 'gridrecall.highScore',
-    highestLevel: 'gridrecall.highestLevel',
+    // "5" = records for the 5-test version; scores from the old 10-test run are not comparable
+    highScore: 'gridrecall.highScore5',
+    highestLevel: 'gridrecall.highestLevel5',
     muted: 'gridrecall.muted',
     hostMode: 'gridrecall.hostMode',
   };
@@ -683,7 +679,7 @@
     });
   }
 
-  /* PHASE 4: BONUS ODD-ONE-OUT (after Test 10) */
+  /* PHASE 4: BONUS ODD-ONE-OUT (after the last test) */
   async function playBonus() {
     updateHud('bonus', 'B', '');
     resetBar();
