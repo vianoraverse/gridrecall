@@ -7,7 +7,7 @@ A 10-stage visual memory game. Memorize which object sits in which numbered box,
 Each test runs through the same phases:
 
 1. **Ready** – a 2-second briefing shows the test number and difficulty tier.
-2. **Memorize** – a grid of numbered boxes opens, each holding one object. Study it until the countdown bar runs out (8–12 seconds).
+2. **Memorize** – a grid of numbered boxes opens, each holding one object. Study it until the countdown runs out (9–14 seconds). The seconds left are shown as a number next to the bar.
 3. **Recall** – the boxes close and only their numbers stay visible. Answer 2–4 questions:
    - *"Where is the X?"* – tap 1 box.
    - *"Where are the X and Y?"* – tap 2 boxes, in any order. Tap a selected box again to undo it.
@@ -27,10 +27,10 @@ You can also answer with the keyboard: keys `1`–`9` pick boxes 1–9 and `0` p
 
 | Test | Tier | Boxes | Memorize | Questions |
 | --- | --- | --- | --- | --- |
-| 1 | Easy | 6 | 8s | single, single |
-| 2 | Easy | 6 | 8s | single, dual |
-| 3 | Medium | 8 | 10s | single, dual |
-| 4 | Medium | 8 | 10s | dual, single |
+| 1 | Easy | 6 | 12s | single, single |
+| 2 | Easy | 6 | 12s | single, dual |
+| 3 | Medium | 8 | 14s | single, dual |
+| 4 | Medium | 8 | 14s | dual, single |
 | 5 | Difficult | 8 | 10s | dual, single, single |
 | 6 | Difficult | 8 | 9s | dual, dual, single |
 | 7 | Very Difficult | 10 | 12s | single, single, single |
@@ -42,7 +42,7 @@ You can also answer with the keyboard: keys `1`–`9` pick boxes 1–9 and `0` p
 
 - Each correct box is worth the tier's base points: Easy 100, Medium 150, Difficult 200, Very Difficult 250, Extreme 300.
 - Getting both boxes of a dual question adds 50% of the base.
-- A fully correct answer earns a speed bonus of up to 50% of the base, depending on how much answer time is left (10s for single questions, 14s for dual).
+- A fully correct answer earns a speed bonus of up to 50% of the base, depending on how much answer time is left. Answer time is 15s for single and 20s for dual questions on Easy and Medium, and 10s / 14s from Difficult up.
 - **Streak multiplier:** every fully correct answer in a row adds ×0.25, up to ×3. Any miss or timeout resets it to ×1.
 - The bonus round is worth a flat 1,000 points.
 
@@ -55,7 +55,7 @@ script.js    icon pool, level config, game state machine, sound, storage
 README.md
 ```
 
-Tunable values live at the top of `script.js`: `LEVELS` (the progression table), `TIERS` (points per tier) and `SETTINGS` (timings, bonus points, multiplier).
+Tunable values live at the top of `script.js`: `LEVELS` (the progression table), `TIERS` (points and answer time per tier) and `SETTINGS` (timings, bonus points, multiplier).
 
 ## Deploying to GitHub Pages
 

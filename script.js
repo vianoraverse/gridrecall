@@ -99,20 +99,21 @@
      2. CONFIGURATION
      ------------------------------------------------------------------------ */
   const TIERS = {
-    easy:      { label: 'Easy',           css: 'tier-easy',      points: 100 },
-    medium:    { label: 'Medium',         css: 'tier-medium',    points: 150 },
-    difficult: { label: 'Difficult',      css: 'tier-difficult', points: 200 },
-    very:      { label: 'Very Difficult', css: 'tier-very',      points: 250 },
-    extreme:   { label: 'Extreme',        css: 'tier-extreme',   points: 300 },
+    // `recall` = seconds allowed to answer a single / dual sub-question
+    easy:      { label: 'Easy',           css: 'tier-easy',      points: 100, recall: { single: 15, dual: 20 } },
+    medium:    { label: 'Medium',         css: 'tier-medium',    points: 150, recall: { single: 15, dual: 20 } },
+    difficult: { label: 'Difficult',      css: 'tier-difficult', points: 200, recall: { single: 10, dual: 14 } },
+    very:      { label: 'Very Difficult', css: 'tier-very',      points: 250, recall: { single: 10, dual: 14 } },
+    extreme:   { label: 'Extreme',        css: 'tier-extreme',   points: 300, recall: { single: 10, dual: 14 } },
     bonus:     { label: 'Bonus',          css: 'tier-bonus',     points: 0 },
   };
 
   // Level progression table. `questions` lists the sub-questions in order.
   const LEVELS = [
-    { test: 1,  tier: 'easy',      boxes: 6,  memorize: 8,  questions: ['single', 'single'] },
-    { test: 2,  tier: 'easy',      boxes: 6,  memorize: 8,  questions: ['single', 'dual'] },
-    { test: 3,  tier: 'medium',    boxes: 8,  memorize: 10, questions: ['single', 'dual'] },
-    { test: 4,  tier: 'medium',    boxes: 8,  memorize: 10, questions: ['dual', 'single'] },
+    { test: 1,  tier: 'easy',      boxes: 6,  memorize: 12, questions: ['single', 'single'] },
+    { test: 2,  tier: 'easy',      boxes: 6,  memorize: 12, questions: ['single', 'dual'] },
+    { test: 3,  tier: 'medium',    boxes: 8,  memorize: 14, questions: ['single', 'dual'] },
+    { test: 4,  tier: 'medium',    boxes: 8,  memorize: 14, questions: ['dual', 'single'] },
     { test: 5,  tier: 'difficult', boxes: 8,  memorize: 10, questions: ['dual', 'single', 'single'] },
     { test: 6,  tier: 'difficult', boxes: 8,  memorize: 9,  questions: ['dual', 'dual', 'single'] },
     { test: 7,  tier: 'very',      boxes: 10, memorize: 12, questions: ['single', 'single', 'single'] },
@@ -125,7 +126,6 @@
     briefingMs: 2000,                        // Phase 1 length
     flipMs: 600,                             // pause after boxes close
     revealMs: 1800,                          // how long the answer stays revealed
-    recallSeconds: { single: 10, dual: 14 }, // answer time per sub-question
     bonusSeconds: 20,
     bonusPoints: 1000,
     bonusOptions: 6,                         // 5 seen icons + 1 decoy
@@ -288,7 +288,7 @@
     let lastSec = seconds;
     el.timebar.classList.remove('is-memorize', 'is-recall', 'is-low');
     el.timebar.classList.add('is-' + mode);
-    el.timeLabel.textContent = seconds + 's';
+    el.timeLabel.textContent = String(seconds);
 
     return new Promise((resolve) => {
       const me = { raf: 0, start, total };
@@ -301,7 +301,7 @@
         const sec = Math.ceil(left / 1000);
         if (sec !== lastSec) {
           lastSec = sec;
-          el.timeLabel.textContent = sec + 's';
+          el.timeLabel.textContent = String(sec);
           el.timebar.setAttribute('aria-valuenow', String(Math.round(frac * 100)));
           if (sec > 0 && onSecond) onSecond(sec);
         }
@@ -547,7 +547,7 @@
         : 'Where are the ' + chip(icons[targets[0]]) + ' and ' + chip(icons[targets[1]]) + '?';
       setPrompt(question, 'Question ' + (q + 1) + ' of ' + qCount + ' · tap ' + (need === 1 ? '1 box' : '2 boxes'));
 
-      const answer = await awaitAnswer(need, SETTINGS.recallSeconds[type]);
+      const answer = await awaitAnswer(need, tier.recall[type]);
 
       // Score it
       const hits = answer.picked.filter((i) => targets.includes(i));
