@@ -138,6 +138,7 @@
     highScore: 'gridrecall.highScore',
     highestLevel: 'gridrecall.highestLevel',
     muted: 'gridrecall.muted',
+    hostMode: 'gridrecall.hostMode',
   };
 
   /* ------------------------------------------------------------------------
@@ -241,6 +242,7 @@
     briefing: $('briefing'), briefKicker: $('briefing-kicker'), briefTitle: $('briefing-title'),
     briefTier: $('briefing-tier'), briefDetail: $('briefing-detail'),
     quit: $('btn-quit'),
+    hostBtn: $('btn-host'), hostText: $('btn-host-text'), hostToggle: $('btn-hostmode'), hostDesc: $('host-desc'),
     resKicker: $('results-kicker'), resTitle: $('results-title'), resScore: $('results-score'),
     resNew: $('results-new'), resStats: $('results-stats'),
     again: $('btn-again'), againText: $('btn-again-text'), next: $('btn-next'), nextText: $('btn-next-text'),
@@ -259,6 +261,11 @@
   let tiles = [];
   const timers = new Set();
 
+  // Host control: no timers; the host presses a button to flip the boxes,
+  // reveal each answer and move on. Stored so the choice survives reloads.
+  let hostMode = !!store.get(STORAGE.hostMode, true);
+  let hostResolve = null;    // set while the game waits for the host button
+
   const sleep = (ms) => {
     const token = runToken;
     return new Promise((resolve) => {
@@ -276,6 +283,27 @@
     timers.clear();
     stopCountdown();
     pickHandler = null;
+    hostIdle('');
+  }
+
+  /* ---- Host button ------------------------------------------------------ */
+
+  // Shows `label` on the host button and resolves when the host presses it.
+  function waitHost(label) {
+    el.hostText.textContent = label;
+    el.hostBtn.disabled = false;
+    return new Promise((resolve) => {
+      hostResolve = () => {
+        hostIdle(label);
+        resolve();
+      };
+    });
+  }
+
+  function hostIdle(label) {
+    hostResolve = null;
+    el.hostBtn.disabled = true;
+    el.hostText.textContent = label;
   }
 
   /* ---- Countdown bar ---------------------------------------------------- */
@@ -454,6 +482,7 @@
     const reserved = shuffle(ICONS).slice(0, SETTINGS.decoyReserve);
     run = {
       mode,
+      host: hostMode,
       startIndex,
       score: 0,
       streak: 0,
@@ -471,6 +500,7 @@
       deck: [],
     };
 
+    el.screens.game.classList.toggle('host', run.host);
     showScreen('game');
     const last = mode === 'challenge' ? LEVELS.length - 1 : startIndex;
     for (let i = startIndex; i <= last; i++) {
@@ -514,18 +544,22 @@
     updateHud(level.tier, String(level.test), '/' + LEVELS.length);
     resetBar();
     setPrompt('Get ready', '');
+    hostIdle('Get ready');
     showBriefing('Get ready', 'Test ' + level.test, level.tier,
-      level.boxes + ' boxes · ' + level.memorize + 's to memorize · ' + qCount + ' questions');
+      level.boxes + ' boxes · ' + (run.host ? '' : level.memorize + 's to memorize · ') + qCount + ' questions');
     await sleep(SETTINGS.briefingMs);
 
     /* PHASE 2: MEMORIZE */
     const icons = drawIcons(level.boxes);
     renderGrid(icons, false);
-    setPrompt('Memorize what is in each box', qCount + ' questions follow when the boxes close');
+    setPrompt('Memorize what is in each box', run.host
+      ? 'Host: press Flip Boxes when everyone is ready'
+      : qCount + ' questions follow when the boxes close');
     await sleep(60);
     tiles.forEach((tile, i) => setOpen(tile, true, icons[i]));
     Sound.flip();
-    await startCountdown(level.memorize, 'memorize', () => Sound.tick());
+    if (run.host) await waitHost('Flip Boxes');
+    else await startCountdown(level.memorize, 'memorize', () => Sound.tick());
 
     /* PHASE 3: RECALL */
     tiles.forEach((tile) => setOpen(tile, false));
@@ -545,7 +579,8 @@
       const question = need === 1
         ? 'Where is the ' + chip(icons[targets[0]]) + '?'
         : 'Where are the ' + chip(icons[targets[0]]) + ' and ' + chip(icons[targets[1]]) + '?';
-      setPrompt(question, 'Question ' + (q + 1) + ' of ' + qCount + ' · tap ' + (need === 1 ? '1 box' : '2 boxes'));
+      setPrompt(question, 'Question ' + (q + 1) + ' of ' + qCount + ' · tap ' + (need === 1 ? '1 box' : '2 boxes') +
+        (run.host ? ', then Reveal Answer' : ''));
 
       const answer = await awaitAnswer(need, tier.recall[type]);
 
@@ -587,11 +622,18 @@
         setPrompt(null, 'Correct  +' + fmt(points), 'good');
       } else {
         Sound.error();
-        const lead = answer.timedOut ? 'Time is up' : hits.length ? 'One of two' : 'Not there';
+        const lead = answer.timedOut ? 'Time is up' : !answer.picked.length ? 'No box picked' : hits.length ? 'One of two' : 'Not there';
         setPrompt(null, lead + (points ? '  +' + fmt(points) : '') + ' · streak reset', 'bad');
       }
 
-      await sleep(SETTINGS.revealMs);
+      if (run.host) {
+        const isLastQuestion = q === qCount - 1;
+        await waitHost(!isLastQuestion ? 'Next Question'
+          : run.mode !== 'challenge' ? 'See Results'
+          : index < LEVELS.length - 1 ? 'Next Test' : 'Bonus Round');
+      } else {
+        await sleep(SETTINGS.revealMs);
+      }
       tiles.forEach((tile) => {
         tile.classList.remove('correct', 'wrong', 'missed', 'selected');
         setOpen(tile, false);
@@ -612,7 +654,7 @@
         done = true;
         pickHandler = null;
         el.grid.classList.add('locked');
-        const timeLeft = stopCountdown();
+        const timeLeft = stopCountdown();   // 0 in host mode: no speed bonus without a clock
         resolve({ picked, timedOut, timeLeft });
       };
 
@@ -623,14 +665,21 @@
           tiles[index].classList.remove('selected');
           return;
         }
+        if (run.host && picked.length === need) {   // host can change the pick until Reveal
+          tiles[picked.shift()].classList.remove('selected');
+        }
         picked.push(index);
         tiles[index].classList.add('selected');
         Sound.select();
-        if (picked.length === need) finish(false);
+        if (!run.host && picked.length === need) finish(false);
       };
 
       el.grid.classList.remove('locked');
-      startCountdown(seconds, 'recall', (sec) => { if (sec <= 3) Sound.tick(); }).then(() => finish(true));
+      if (run.host) {
+        waitHost('Reveal Answer').then(() => finish(false));
+      } else {
+        startCountdown(seconds, 'recall', (sec) => { if (sec <= 3) Sound.tick(); }).then(() => finish(true));
+      }
     });
   }
 
@@ -639,6 +688,7 @@
     updateHud('bonus', 'B', '');
     resetBar();
     setPrompt('Bonus round', '');
+    hostIdle('Get ready');
     showBriefing('Final challenge', 'Odd One Out', 'bonus',
       'Worth ' + fmt(SETTINGS.bonusPoints) + ' points');
     Sound.fanfare();
@@ -654,7 +704,7 @@
     tiles.forEach((tile, i) => setOpen(tile, true, options[i]));
     Sound.flip();
     setPrompt('Which of these objects <em>never</em> appeared in the game?',
-      'Bonus · tap 1 object · +' + fmt(SETTINGS.bonusPoints) + ' points');
+      'Bonus · tap 1 object' + (run.host ? ', then Reveal Answer' : '') + ' · +' + fmt(SETTINGS.bonusPoints) + ' points');
 
     const answer = await awaitAnswer(1, SETTINGS.bonusSeconds);
     const choice = answer.picked[0];
@@ -674,9 +724,10 @@
       setPrompt(null, 'Correct  +' + fmt(SETTINGS.bonusPoints) + ' · the ' + decoy.label + ' was never shown', 'good');
     } else {
       Sound.error();
-      setPrompt(null, (answer.timedOut ? 'Time is up' : 'Not that one') + ' · the ' + decoy.label + ' was never shown', 'bad');
+      setPrompt(null, (answer.timedOut ? 'Time is up' : choice === undefined ? 'No object picked' : 'Not that one') + ' · the ' + decoy.label + ' was never shown', 'bad');
     }
-    await sleep(SETTINGS.revealMs + 700);
+    if (run.host) await waitHost('See Results');
+    else await sleep(SETTINGS.revealMs + 700);
   }
 
   /* ------------------------------------------------------------------------
@@ -738,6 +789,13 @@
     }).join('');
   }
 
+  function refreshHostToggle() {
+    el.hostToggle.setAttribute('aria-checked', String(hostMode));
+    el.hostDesc.textContent = hostMode
+      ? 'On: no timers. You press a button to flip the boxes, reveal each answer and move on.'
+      : 'Off: countdown timers flip the boxes and end each question automatically.';
+  }
+
   function refreshMuteButtons() {
     document.querySelectorAll('.js-mute').forEach((btn) => {
       btn.innerHTML = svg(Sound.muted ? UI_ICONS.soundOff : UI_ICONS.soundOn);
@@ -761,6 +819,23 @@
     el.grid.addEventListener('click', (e) => {
       const tile = e.target.closest('.tile');
       if (tile && pickHandler) pickHandler(Number(tile.dataset.index));
+    });
+
+    el.hostToggle.addEventListener('click', () => {
+      hostMode = !hostMode;
+      store.set(STORAGE.hostMode, hostMode);
+      refreshHostToggle();
+    });
+
+    el.hostBtn.addEventListener('click', () => { if (hostResolve) hostResolve(); });
+
+    // Host button shortcuts: Space, Right Arrow or Page Down (what presentation clickers send)
+    document.addEventListener('keydown', (e) => {
+      if (!hostResolve || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key !== ' ' && e.key !== 'ArrowRight' && e.key !== 'PageDown') return;
+      e.preventDefault();
+      if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+      hostResolve();
     });
 
     // Number keys pick boxes: 1-9, and 0 for box 10
@@ -803,6 +878,7 @@
     });
     buildPracticeButtons();
     refreshMuteButtons();
+    refreshHostToggle();
     bindEvents();
     showMenu();
   }

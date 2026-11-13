@@ -16,6 +16,20 @@ Each test runs through the same phases:
 
 You can also answer with the keyboard: keys `1`–`9` pick boxes 1–9 and `0` picks box 10.
 
+### Host Control (for events)
+
+The **Host Control** switch on the menu is on by default and removes every timer. One button under the scoreboard drives the game instead:
+
+| Button | When it appears | What it does |
+| --- | --- | --- |
+| Flip Boxes | while the boxes are open | closes the boxes and asks the first question |
+| Reveal Answer | during a question | marks the picked boxes and opens the correct ones |
+| Next Question / Next Test / Bonus Round / See Results | after an answer is revealed | moves on |
+
+Before pressing **Reveal Answer** you can tap the box (or boxes) the audience chose; tapping another box replaces the pick. Revealing with nothing picked counts as a miss. `Space`, `Right Arrow` and `Page Down` press the button, so a presentation clicker works. There is no speed bonus in this mode.
+
+Turn the switch off for solo play with countdown timers. The choice is remembered.
+
 ### Modes
 
 | Mode | What it does |
@@ -78,5 +92,5 @@ All asset paths are relative (`./style.css`, `./script.js`), so the game works a
 - **Icons:** 60 objects stored as inline SVG paths in `script.js`. Nothing is loaded from a CDN. 59 come from [Lucide](https://lucide.dev) (ISC licence); the cactus is drawn by hand.
 - **Bonus decoy:** four icons are held back at the start of every run and never dealt into a grid, so the decoy is guaranteed never to have appeared.
 - **Sound:** tick, flip, select, correct chime, error buzz and fanfare are synthesized with the Web Audio API. The mute button's state is remembered.
-- **Storage:** `localStorage` keys `gridrecall.highScore`, `gridrecall.highestLevel` and `gridrecall.muted`. To reset your records, clear site data for the page.
+- **Storage:** `localStorage` keys `gridrecall.highScore`, `gridrecall.highestLevel`, `gridrecall.muted` and `gridrecall.hostMode`. To reset your records, clear site data for the page.
 - **Browsers:** current Chrome, Edge, Firefox and Safari.

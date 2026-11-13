@@ -36,6 +36,14 @@
         </div>
       </div>
 
+      <div class="mode mode-row">
+        <div class="mode-head">
+          <h2 id="host-title">Host Control</h2>
+          <p id="host-desc"></p>
+        </div>
+        <button id="btn-hostmode" class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="host-title"><span></span></button>
+      </div>
+
       <div class="mode">
         <div class="mode-head">
           <h2>Challenge Mode</h2>
@@ -96,6 +104,12 @@
           <div class="timebar-fill" id="timebar-fill"></div>
         </div>
         <span class="time-readout" aria-hidden="true"><span class="time-label" id="hud-time">&ndash;</span><small>sec</small></span>
+      </div>
+
+      <div class="host-bar">
+        <button id="btn-host" class="btn btn-primary" type="button" disabled>
+          <span id="btn-host-text">Flip Boxes</span><kbd>Space</kbd>
+        </button>
       </div>
     </header>
 
