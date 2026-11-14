@@ -110,11 +110,11 @@
 
   // Level progression table. `questions` lists the sub-questions in order.
   const LEVELS = [
-    { test: 1, tier: 'easy',      boxes: 6,  memorize: 12, questions: ['single', 'single'] },
-    { test: 2, tier: 'medium',    boxes: 8,  memorize: 14, questions: ['single', 'dual'] },
-    { test: 3, tier: 'difficult', boxes: 8,  memorize: 10, questions: ['dual', 'single', 'single'] },
-    { test: 4, tier: 'very',      boxes: 10, memorize: 11, questions: ['single', 'dual', 'single'] },
-    { test: 5, tier: 'extreme',   boxes: 10, memorize: 10, questions: ['dual', 'single', 'dual', 'single'] },
+    { test: 1, tier: 'easy',      boxes: 2,  memorize: 6,  questions: ['single'] },
+    { test: 2, tier: 'medium',    boxes: 4,  memorize: 8,  questions: ['single'] },
+    { test: 3, tier: 'difficult', boxes: 6,  memorize: 10, questions: ['single'] },
+    { test: 4, tier: 'very',      boxes: 8,  memorize: 12, questions: ['dual'] },
+    { test: 5, tier: 'extreme',   boxes: 10, memorize: 14, questions: ['dual'] },
   ];
 
   const SETTINGS = {
@@ -130,9 +130,9 @@
   };
 
   const STORAGE = {
-    // "5" = records for the 5-test version; scores from the old 10-test run are not comparable
-    highScore: 'gridrecall.highScore5',
-    highestLevel: 'gridrecall.highestLevel5',
+    // "v3" = records for the current level table; scores from earlier tables are not comparable
+    highScore: 'gridrecall.v3.highScore',
+    highestLevel: 'gridrecall.v3.highestLevel',
     muted: 'gridrecall.muted',
     hostMode: 'gridrecall.hostMode',
   };
@@ -448,7 +448,7 @@
     const w = Math.min(rect.width, 1100) || 1;
     const h = rect.height || 1;
     let best = null;
-    [2, 3, 4, 5].filter((c) => n % c === 0).forEach((cols) => {
+    [1, 2, 3, 4, 5].filter((c) => n % c === 0).forEach((cols) => {
       const rows = n / cols;
       const skew = Math.abs(Math.log((w / cols) / (h / rows)));
       if (!best || skew < best.skew) best = { cols, rows, skew };
@@ -531,6 +531,7 @@
     const level = LEVELS[index];
     const tier = TIERS[level.tier];
     const qCount = level.questions.length;
+    const qWord = qCount === 1 ? ' question' : ' questions';
 
     if (run.mode === 'challenge' && level.test > store.get(STORAGE.highestLevel, 0)) {
       store.set(STORAGE.highestLevel, level.test);
@@ -542,7 +543,7 @@
     setPrompt('Get ready', '');
     hostIdle('Get ready');
     showBriefing('Get ready', 'Test ' + level.test, level.tier,
-      level.boxes + ' boxes · ' + (run.host ? '' : level.memorize + 's to memorize · ') + qCount + ' questions');
+      level.boxes + ' boxes · ' + (run.host ? '' : level.memorize + 's to memorize · ') + qCount + qWord);
     await sleep(SETTINGS.briefingMs);
 
     /* PHASE 2: MEMORIZE */
@@ -550,7 +551,7 @@
     renderGrid(icons, false);
     setPrompt('Memorize what is in each box', run.host
       ? 'Host: press Flip Boxes when everyone is ready'
-      : qCount + ' questions follow when the boxes close');
+      : qCount + qWord + (qCount === 1 ? ' follows' : ' follow') + ' when the boxes close');
     await sleep(60);
     tiles.forEach((tile, i) => setOpen(tile, true, icons[i]));
     Sound.flip();
@@ -575,7 +576,7 @@
       const question = need === 1
         ? 'Where is the ' + chip(icons[targets[0]]) + '?'
         : 'Where are the ' + chip(icons[targets[0]]) + ' and ' + chip(icons[targets[1]]) + '?';
-      setPrompt(question, 'Question ' + (q + 1) + ' of ' + qCount + ' · tap ' + (need === 1 ? '1 box' : '2 boxes') +
+      setPrompt(question, (qCount > 1 ? 'Question ' + (q + 1) + ' of ' + qCount + ' · ' : '') + 'Tap ' + (need === 1 ? '1 box' : '2 boxes') +
         (run.host ? ', then Reveal Answer' : ''));
 
       const answer = await awaitAnswer(need, tier.recall[type]);

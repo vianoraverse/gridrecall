@@ -7,8 +7,8 @@ A 5-stage visual memory game. Memorize which object sits in which numbered box, 
 Each test runs through the same phases:
 
 1. **Ready** – a 2-second briefing shows the test number and difficulty tier.
-2. **Memorize** – a grid of numbered boxes opens, each holding one object. Study it until the countdown runs out (10–14 seconds). The seconds left are shown as a number next to the bar.
-3. **Recall** – the boxes close and only their numbers stay visible. Answer 2–4 questions:
+2. **Memorize** – a grid of numbered boxes opens, each holding one object. Study it until the countdown runs out (6–14 seconds). The seconds left are shown as a number next to the bar.
+3. **Recall** – the boxes close and only their numbers stay visible. Each test asks one question:
    - *"Where is the X?"* – tap 1 box.
    - *"Where are the X and Y?"* – tap 2 boxes, in any order. Tap a selected box again to undo it.
    - Correct picks turn green, wrong picks turn red, and the correct boxes open briefly.
@@ -22,9 +22,9 @@ The **Host Control** switch on the menu is on by default and removes every timer
 
 | Button | When it appears | What it does |
 | --- | --- | --- |
-| Flip Boxes | while the boxes are open | closes the boxes and asks the first question |
+| Flip Boxes | while the boxes are open | closes the boxes and asks the question |
 | Reveal Answer | during a question | marks the picked boxes and opens the correct ones |
-| Next Question / Next Test / Bonus Round / See Results | after an answer is revealed | moves on |
+| Next Test / Bonus Round / See Results | after an answer is revealed | moves on |
 
 Before pressing **Reveal Answer** you can tap the box (or boxes) the audience chose; tapping another box replaces the pick. Revealing with nothing picked counts as a miss. `Space`, `Right Arrow` and `Page Down` press the button, so a presentation clicker works. There is no speed bonus in this mode.
 
@@ -39,13 +39,13 @@ Turn the switch off for solo play with countdown timers. The choice is remembere
 
 ### Level table
 
-| Test | Tier | Boxes | Memorize (timer mode) | Questions |
+| Test | Tier | Boxes | Memorize (timer mode) | Question |
 | --- | --- | --- | --- | --- |
-| 1 | Easy | 6 | 12s | single, single |
-| 2 | Medium | 8 | 14s | single, dual |
-| 3 | Difficult | 8 | 10s | dual, single, single |
-| 4 | Very Difficult | 10 | 11s | single, dual, single |
-| 5 | Extreme | 10 | 10s | dual, single, dual, single |
+| 1 | Easy | 2 | 6s | single (1 box) |
+| 2 | Medium | 4 | 8s | single (1 box) |
+| 3 | Difficult | 6 | 10s | single (1 box) |
+| 4 | Very Difficult | 8 | 12s | dual (2 boxes) |
+| 5 | Extreme | 10 | 14s | dual (2 boxes) |
 
 ### Scoring
 
@@ -87,5 +87,5 @@ All asset paths are relative (`./style.css`, `./script.js`), so the game works a
 - **Icons:** 60 objects stored as inline SVG paths in `script.js`. Nothing is loaded from a CDN. 59 come from [Lucide](https://lucide.dev) (ISC licence); the cactus is drawn by hand.
 - **Bonus decoy:** four icons are held back at the start of every run and never dealt into a grid, so the decoy is guaranteed never to have appeared.
 - **Sound:** tick, flip, select, correct chime, error buzz and fanfare are synthesized with the Web Audio API. The mute button's state is remembered.
-- **Storage:** `localStorage` keys `gridrecall.highScore5`, `gridrecall.highestLevel5`, `gridrecall.muted` and `gridrecall.hostMode`. To reset your records, clear site data for the page.
+- **Storage:** `localStorage` keys `gridrecall.v3.highScore`, `gridrecall.v3.highestLevel`, `gridrecall.muted` and `gridrecall.hostMode`. To reset your records, clear site data for the page.
 - **Browsers:** current Chrome, Edge, Firefox and Safari.
