@@ -1056,6 +1056,10 @@
     refreshHostToggle();
     bindEvents();
     showMenu();
+    // Try to start the music right away. This only works where the browser allows autoplay
+    // for this site; otherwise it stays silent until the first tap or key press.
+    Sound.unlock();
+    Music.start();
   }
 
   init();
