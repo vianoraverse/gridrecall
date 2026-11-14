@@ -76,6 +76,7 @@
 
   const UI_ICONS = {
     soundOn: '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>',
+    music: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
     soundOff: '<path d="M11 4.702a.7.7 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.7.7 0 0 0 11 19.298z"/><path d="m16.5 14.5 5-5"/><path d="m16.5 9.5 5 5"/>',
     home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
     play: '<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>',
@@ -135,6 +136,7 @@
     highestLevel: 'gridrecall.v3.highestLevel',
     muted: 'gridrecall.muted',
     hostMode: 'gridrecall.hostMode',
+    music: 'gridrecall.music',
   };
 
   /* ------------------------------------------------------------------------
@@ -220,7 +222,157 @@
     toggle() {
       this.muted = !this.muted;
       store.set(STORAGE.muted, this.muted);
-      if (!this.muted) { this.unlock(); this.select(); }
+      if (this.muted) {
+        Music.stop();
+      } else {
+        this.unlock();
+        this.select();
+        Music.start();
+      }
+    },
+  };
+
+  /* ------------------------------------------------------------------------
+     4b. BACKGROUND MUSIC (Web Audio API sequencer, no audio files)
+     A 4-bar loop (Am7, Fmaj7, C, G6) of pad, bass, arpeggio, kick and hi-hat.
+     Notes are scheduled slightly ahead on the audio clock, so the loop is
+     seamless and never drifts. It shares Sound's AudioContext.
+     ------------------------------------------------------------------------ */
+  const Music = {
+    on: !!store.get(STORAGE.music, true),
+    playing: false,
+    bus: null,          // { out, bassFilter, arpFilter, noise }
+    timer: 0,
+    step: 0,            // 16th-note position within the 64-step loop
+    nextTime: 0,
+    BPM: 96,
+    VOLUME: 0.5,
+    CHORDS: [           // MIDI notes
+      { bass: 45, arp: [57, 60, 64, 67] },   // Am7
+      { bass: 41, arp: [57, 60, 64, 65] },   // Fmaj7
+      { bass: 48, arp: [55, 60, 64, 67] },   // C
+      { bass: 43, arp: [55, 59, 62, 64] },   // G6
+    ],
+    BASS_STEPS: [0, 3, 6, 8, 11, 14],
+    ARP_ORDER: [0, 1, 2, 3, 2, 1, 2, 3],
+
+    build() {
+      const ctx = Sound.ctx;
+      const out = ctx.createGain();
+      out.gain.value = 0;
+      out.connect(ctx.destination);
+      const bassFilter = ctx.createBiquadFilter();
+      bassFilter.type = 'lowpass';
+      bassFilter.frequency.value = 420;
+      bassFilter.connect(out);
+      const arpFilter = ctx.createBiquadFilter();
+      arpFilter.type = 'lowpass';
+      arpFilter.frequency.value = 1700;
+      arpFilter.connect(out);
+      const hatFilter = ctx.createBiquadFilter();
+      hatFilter.type = 'highpass';
+      hatFilter.frequency.value = 7000;
+      hatFilter.connect(out);
+      const noise = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.06), ctx.sampleRate);
+      const data = noise.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      this.bus = { out, bassFilter, arpFilter, hatFilter, noise };
+    },
+
+    start() {
+      if (this.playing || !this.on || Sound.muted || !Sound.ctx || document.hidden) return;
+      try {
+        if (!this.bus) this.build();
+        const now = Sound.ctx.currentTime;
+        this.bus.out.gain.cancelScheduledValues(now);
+        this.bus.out.gain.setTargetAtTime(this.VOLUME, now, 0.25);
+        this.step = 0;
+        this.nextTime = now + 0.1;
+        this.playing = true;
+        this.timer = setInterval(() => this.schedule(), 60);
+      } catch (e) {
+        this.playing = false;
+      }
+    },
+
+    stop() {
+      if (!this.playing) return;
+      clearInterval(this.timer);
+      this.playing = false;
+      const now = Sound.ctx.currentTime;
+      this.bus.out.gain.cancelScheduledValues(now);
+      this.bus.out.gain.setTargetAtTime(0, now, 0.06);
+    },
+
+    toggle() {
+      this.on = !this.on;
+      store.set(STORAGE.music, this.on);
+      if (this.on) { Sound.unlock(); this.start(); } else this.stop();
+    },
+
+    // Queue every step that falls inside the next 0.3s of audio time
+    schedule() {
+      const ctx = Sound.ctx;
+      const stepDur = 60 / this.BPM / 4;
+      if (this.nextTime < ctx.currentTime) this.nextTime = ctx.currentTime + 0.05;   // timers were throttled
+      while (this.nextTime < ctx.currentTime + 0.3) {
+        try { this.playStep(this.step, this.nextTime, stepDur); } catch (e) { /* skip a step, keep the loop */ }
+        this.nextTime += stepDur;
+        this.step = (this.step + 1) % 64;
+      }
+    },
+
+    voice(dest, type, midi, t, dur, vol, attack) {
+      const ctx = Sound.ctx;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(vol, t + attack);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(gain).connect(dest);
+      osc.start(t);
+      osc.stop(t + dur + 0.05);
+    },
+
+    playStep(step, t, stepDur) {
+      const ctx = Sound.ctx;
+      const bus = this.bus;
+      const bar = Math.floor(step / 16);
+      const s = step % 16;
+      const chord = this.CHORDS[bar];
+
+      if (s === 0) {                                   // pad: the whole chord, held for the bar
+        chord.arp.forEach((m) => this.voice(bus.out, 'triangle', m, t, stepDur * 16, 0.035, 0.4));
+      }
+      if (this.BASS_STEPS.includes(s)) {
+        this.voice(bus.bassFilter, 'sawtooth', chord.bass, t, stepDur * 2.4, 0.22, 0.01);
+      }
+      if (s % 2 === 0) {                               // arpeggio on 8th notes, an octave up
+        const m = chord.arp[this.ARP_ORDER[s / 2]] + 12;
+        this.voice(bus.arpFilter, 'square', m, t, stepDur * 1.8, 0.05, 0.01);
+      }
+      if (s === 0 || s === 8) {                        // kick
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.setValueAtTime(130, t);
+        osc.frequency.exponentialRampToValueAtTime(42, t + 0.13);
+        gain.gain.setValueAtTime(0.4, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+        osc.connect(gain).connect(bus.out);
+        osc.start(t);
+        osc.stop(t + 0.22);
+      }
+      if (s % 4 === 2) {                               // off-beat hi-hat
+        const src = ctx.createBufferSource();
+        const gain = ctx.createGain();
+        src.buffer = bus.noise;
+        gain.gain.setValueAtTime(0.09, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+        src.connect(gain).connect(bus.hatFilter);
+        src.start(t);
+      }
     },
   };
 
@@ -794,6 +946,12 @@
   }
 
   function refreshMuteButtons() {
+    document.querySelectorAll('.js-music').forEach((btn) => {
+      btn.innerHTML = svg(UI_ICONS.music + (Music.on ? '' : '<path d="m3 3 18 18"/>'));
+      btn.classList.toggle('is-muted', !Music.on);
+      btn.setAttribute('aria-label', Music.on ? 'Turn music off' : 'Turn music on');
+      btn.setAttribute('aria-pressed', String(Music.on));
+    });
     document.querySelectorAll('.js-mute').forEach((btn) => {
       btn.innerHTML = svg(Sound.muted ? UI_ICONS.soundOff : UI_ICONS.soundOn);
       btn.classList.toggle('is-muted', Sound.muted);
@@ -844,6 +1002,26 @@
 
     document.querySelectorAll('.js-mute').forEach((btn) =>
       btn.addEventListener('click', () => { Sound.toggle(); refreshMuteButtons(); }));
+
+    document.querySelectorAll('.js-music').forEach((btn) =>
+      btn.addEventListener('click', () => { Music.toggle(); refreshMuteButtons(); }));
+
+    // M toggles the music (handy for stopping it mid-game)
+    document.addEventListener('keydown', (e) => {
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.key.toLowerCase() !== 'm') return;
+      Music.toggle();
+      refreshMuteButtons();
+    });
+
+    // Browsers only allow audio after a user gesture, so the music starts on the first tap or key
+    const wake = () => { Sound.unlock(); Music.start(); };
+    document.addEventListener('pointerdown', wake);
+    document.addEventListener('keydown', wake);
+
+    // Background tabs throttle timers, which would make the loop stutter
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) Music.stop(); else Music.start();
+    });
 
     // Quit needs a second tap within 2.5s, so a stray tap cannot end a run
     let quitTimer = 0;

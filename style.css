@@ -116,9 +116,9 @@ svg { display: block; width: 1em; height: 1em; }
   padding: clamp(16px, 4vmin, 36px);
   display: flex; flex-direction: column; gap: clamp(14px, 2.6vmin, 22px);
 }
-.menu-mute { position: absolute; top: clamp(16px, 4vmin, 36px); right: clamp(16px, 4vmin, 36px); }
+.menu-actions { display: flex; gap: 8px; position: absolute; top: clamp(16px, 4vmin, 36px); right: clamp(16px, 4vmin, 36px); }
 
-.logo { display: flex; align-items: center; gap: 16px; padding-right: 56px; }
+.logo { display: flex; align-items: center; gap: 16px; padding-right: 104px; }
 .logo-mark { display: grid; grid-template-columns: repeat(3, 14px); gap: 4px; flex: none; }
 .logo-mark i { width: 14px; height: 14px; border-radius: 4px; background: var(--line-2); }
 .logo-mark i:nth-child(2) { background: var(--cyan); }

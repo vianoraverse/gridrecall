@@ -86,6 +86,7 @@ All asset paths are relative (`./style.css`, `./script.js`), so the game works a
 
 - **Icons:** 60 objects stored as inline SVG paths in `script.js`. Nothing is loaded from a CDN. 59 come from [Lucide](https://lucide.dev) (ISC licence); the cactus is drawn by hand.
 - **Bonus decoy:** four icons are held back at the start of every run and never dealt into a grid, so the decoy is guaranteed never to have appeared.
+- **Music:** a looping 4-bar synth track, also generated with the Web Audio API (no audio file). It starts on the first tap or key press, because browsers block audio before that. The music-note button or the `M` key turns it on and off; the speaker button mutes everything.
 - **Sound:** tick, flip, select, correct chime, error buzz and fanfare are synthesized with the Web Audio API. The mute button's state is remembered.
-- **Storage:** `localStorage` keys `gridrecall.v3.highScore`, `gridrecall.v3.highestLevel`, `gridrecall.muted` and `gridrecall.hostMode`. To reset your records, clear site data for the page.
+- **Storage:** `localStorage` keys `gridrecall.v3.highScore`, `gridrecall.v3.highestLevel`, `gridrecall.muted`, `gridrecall.music` and `gridrecall.hostMode`. To reset your records, clear site data for the page.
 - **Browsers:** current Chrome, Edge, Firefox and Safari.
